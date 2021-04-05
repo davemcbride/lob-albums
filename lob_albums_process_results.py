@@ -51,5 +51,6 @@ with open('full_album_list.txt', 'w') as filehandle:
 # count the occurrences of each album
 print("count occurrences of albums:")
 count_albums = Counter(combined_lower)
-print(count_albums)
 
+for key, value in count_albums.items():
+    print(value, ' : ', key)
