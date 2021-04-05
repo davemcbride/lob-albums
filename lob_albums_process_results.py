@@ -28,18 +28,28 @@ del album3_list[0]
 
 # combine album lists into one
 combined_albums = album1_list + album2_list + album3_list
+# print("all albums")
+# print(combined_albums)
 
-print("all albums")
-print(combined_albums)
+# lowercase the albums to handle varying case in input
+combined_lower = [each_string.lower() for each_string in combined_albums]
 
-print("unique albums")
-unique_albums = set(combined_albums)
-print(unique_albums)
+# get list of unqiue albums
+unique_albums = set(combined_lower)
+# print("unique albums:")
+# print(unique_albums)
 
+# print count of unique albums
+print("There were " + str(len(combined_lower)) + " albums submitted")
+print("There were " + str(len(unique_albums)) + " unique albums")
+print()
+
+# write the unique list out to file for later use
 with open('full_album_list.txt', 'w') as filehandle:
     filehandle.writelines("%s\n" % album for album in unique_albums)
 
-print("count occurrences of albums")
-count_albums = Counter(combined_albums)
+# count the occurrences of each album
+print("count occurrences of albums:")
+count_albums = Counter(combined_lower)
 print(count_albums)
 
