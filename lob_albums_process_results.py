@@ -10,37 +10,49 @@ client = gspread.authorize(creds)
 
 # Find a workbook by name and open the first sheet
 # Make sure you use the right name here.
-sheet = client.open("top_albums_2_test").sheet1
+sheet = client.open("Load of Bands Album Challenge (Responses Test)").sheet1
 
-# Extract and print all of the values
-# list_of_hashes = sheet.get_all_records()
-# print(list_of_hashes)
+# create a lists of all the artists
+artist_list = sheet.col_values(3)
+for i in range(6,30,3):
+    artist_list = artist_list + sheet.col_values(i)
 
-# pull the artist - album names into lists
-album1_list = sheet.col_values(3)
-album2_list = sheet.col_values(5)
-album3_list = sheet.col_values(7)
+album_list = sheet.col_values(4)
+for i in range(7,31,3):
+    album_list = album_list + sheet.col_values(i)
 
-# delete the spreadsheet header row
-del album1_list[0]
-del album2_list[0]
-del album3_list[0]
+# delete spreadsheet header row
+val = 'Artist'
+# filter the list to remove header string 'Artist'
+artist_list = [i for i in artist_list if i != val]
+# filter list to remove header string 'Album Title'
+val = 'Album Title'
+album_list = [i for i in album_list if i != val]
 
-# combine album lists into one
-combined_albums = album1_list + album2_list + album3_list
-# print("all albums")
-# print(combined_albums)
+# error if the artist list and album list are not the same length
+if len(artist_list) != len(album_list):
+    print("The number of artists and albums do not match")
+    print("Artists count: " + str(len(artist_list)))
+    print("Albums count: " + str(len(album_list)))
+    print(artist_list)
+    print(album_list)
+    quit()
+
+# combine artist album lists to artist - album
+artist_album_list = []
+for i in range(len(artist_list)):
+    artist_album_list.append(artist_list[i] + " - " +  album_list[i])
+
+# print(artist_album_list)
 
 # lowercase the albums to handle varying case in input
-combined_lower = [each_string.lower() for each_string in combined_albums]
+artist_album_list_lower = [each_string.lower() for each_string in artist_album_list]
 
 # get list of unqiue albums
-unique_albums = set(combined_lower)
-# print("unique albums:")
-# print(unique_albums)
+unique_albums = set(artist_album_list_lower)
 
 # print count of unique albums
-print("There were " + str(len(combined_lower)) + " albums submitted")
+print("There were " + str(len(artist_album_list_lower)) + " albums submitted")
 print("There were " + str(len(unique_albums)) + " unique albums")
 print()
 
@@ -50,7 +62,7 @@ with open('full_album_list.txt', 'w') as filehandle:
 
 # count the occurrences of each album
 print("count occurrences of albums:")
-count_albums = Counter(combined_lower)
+count_albums = Counter(artist_album_list_lower)
 
 for key, value in count_albums.items():
     print(value, ' : ', key)
