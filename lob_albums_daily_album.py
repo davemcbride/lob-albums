@@ -2,7 +2,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import random
 import datetime
-
+import csv
 
 '''
 # use creds to create a client to interact with the Google Drive API
@@ -16,6 +16,7 @@ client = gspread.authorize(creds)
 sheet = client.open("top_albums_2_test").sheet1
 '''
 
+'''
 # pick an album from the list file created by the other script
 albums_master = open("album_list.txt", "r")
 albums_list = albums_master.readlines()
@@ -24,8 +25,16 @@ albums_list = albums_master.readlines()
 alist = []
 for i in albums_list:
     alist.append(i.rstrip('\n'))
-# print(alist)
+print(alist)
+'''
 
+with open('album_list.txt') as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter='-')
+    for row in csv_reader:
+        print(row[0].strip())
+        print(row[1].strip())
+
+'''
 # pick random album from the list
 todays_album = random.choice(alist)
 print("Today's album is: " + todays_album)
@@ -42,4 +51,4 @@ alist.remove(todays_album)
 with open('album_list.txt', 'w') as filehandle:
     filehandle.writelines("%s\n" % album for album in alist)
 
-
+'''
