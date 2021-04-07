@@ -36,11 +36,9 @@ f.write(str(x) + ": " + todays_album + "\n")
 # remove todays album from the list
 alist.remove(todays_album)
 
-'''
 # overwrite the album file with the new list (minus today's album)
 with open('album_list.txt', 'w') as filehandle:
     filehandle.writelines("%s\n" % album for album in alist)
-'''
 
 # split album string into artist, album
 artist_album_list = todays_album.split(" - ")
