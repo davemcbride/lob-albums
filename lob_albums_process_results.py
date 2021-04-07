@@ -4,6 +4,7 @@ from collections import Counter
 
 # use creds to create a client to interact with the Google Drive API
 # scope = ['https://spreadsheets.google.com/feeds']
+print("Pulling data from Google Sheets...")
 scope = ['https://spreadsheets.google.com/feeds' + ' ' +'https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name('google_api_auth.json', scope)
 client = gspread.authorize(creds)
@@ -11,7 +12,9 @@ client = gspread.authorize(creds)
 # Find a workbook by name and open the first sheet
 # Make sure you use the right name here.
 sheet = client.open("Load of Bands Album Challenge (Responses Test)").sheet1
+print("Done")
 
+print("Processing album list...")
 # create a lists of all the artists
 artist_list = sheet.col_values(3)
 for i in range(6,30,3):
@@ -47,19 +50,24 @@ for i in range(len(artist_list)):
 
 # lowercase the albums to handle varying case in input
 artist_album_list_lower = [each_string.lower() for each_string in artist_album_list]
+print("Done")
 
+print("Generating stats...")
 # get list of unqiue albums
 unique_albums = set(artist_album_list_lower)
 
 # print count of unique albums
 print("There were " + str(len(artist_album_list_lower)) + " albums submitted")
 print("There were " + str(len(unique_albums)) + " unique albums")
-print()
+print("Done")
 
+print("Writing album list to disk...")
 # write the unique list out to file for later use
 with open('album_list.txt', 'w') as filehandle:
     filehandle.writelines("%s\n" % album for album in unique_albums)
+print("Done...album_list.txt")
 
+print("Counting unique albums...")
 # count the occurrences of each album
 print("count occurrences of albums:")
 count_albums = Counter(artist_album_list_lower)
