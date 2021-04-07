@@ -17,7 +17,7 @@ sheet = client.open("top_albums_2_test").sheet1
 '''
 
 # pick an album from the list file created by the other script
-albums_master = open("full_album_list.txt", "r")
+albums_master = open("album_list.txt", "r")
 albums_list = albums_master.readlines()
 
 # remove newline from the list
@@ -39,7 +39,7 @@ f.write(str(x) + ": " + todays_album + "\n")
 alist.remove(todays_album)
 
 # overwrite the album file with the new list (minus today's album)
-with open('full_album_list.txt', 'w') as filehandle:
+with open('album_list.txt', 'w') as filehandle:
     filehandle.writelines("%s\n" % album for album in alist)
 
 

@@ -57,7 +57,7 @@ print("There were " + str(len(unique_albums)) + " unique albums")
 print()
 
 # write the unique list out to file for later use
-with open('full_album_list.txt', 'w') as filehandle:
+with open('album_list.txt', 'w') as filehandle:
     filehandle.writelines("%s\n" % album for album in unique_albums)
 
 # count the occurrences of each album
