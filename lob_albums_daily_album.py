@@ -6,7 +6,6 @@ import re
 import configparser
 import smtplib, ssl
 
-'''
 # use creds to create a client to interact with the Google Drive API
 # scope = ['https://spreadsheets.google.com/feeds']
 scope = ['https://spreadsheets.google.com/feeds' + ' ' +'https://www.googleapis.com/auth/drive']
@@ -49,14 +48,26 @@ artist = artist_album_list[0]
 album = artist_album_list[1]
 
 # find matching cells for today's album
-
 criteria_re = re.compile(album, re.IGNORECASE)
 cell_list = sheet.findall(criteria_re)
 
 # loop through all matching cells
 # check the artist matches the expected artist for the matching album
+
+# initialise start of email message
+message = """\
+Subject: Load of Bands - Daily Album {date}
+
+Today's album: {album}
+
+""".format(date=x, album=todays_album)
+
 # print the matching user from the same row
 # print the matchin user's reason
+
+# initialise user list
+user_list = []
+
 for i in cell_list:
     row_number = i.row
     col_number = i.col
@@ -70,12 +81,18 @@ for i in cell_list:
         print("Check Sheet: Row Num: " + str(row_number) + " Col Num: " + str(col_number))
     else:
        user = sheet.cell(row_number, 2).value
-       print(user)
-       # print user's reason
        reason = sheet.cell(row_number, col_number + 1).value
-       print(reason)
-'''
+       
+       # add todays pickers to list
+       user_list.append(user)
+       user_list.append(reason)
+       user_list.append('\n')
 
+# join the users and reasons
+todays_users = message.join(user_list)
+print(todays_users)
+
+'''
 # email
 # read config file
 config = configparser.ConfigParser()
@@ -84,14 +101,13 @@ from_email = config.get('CONF','FROM_EMAIL')
 email_pass = config.get('CONF','EMAIL_PASS')
 to_email = config.get('CONF','TO_EMAIL')
 
-message = "hello everybody"
-
 port = 465  # For SSL
 
 # Create a secure SSL context
 context = ssl.create_default_context()
 
+# send email
 with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
     server.login(from_email, email_pass)
     server.sendmail(from_email, to_email, message)
-
+'''
