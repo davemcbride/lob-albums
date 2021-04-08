@@ -3,7 +3,10 @@ from oauth2client.service_account import ServiceAccountCredentials
 import random
 import datetime
 import re
+import configparser
+import smtplib, ssl
 
+'''
 # use creds to create a client to interact with the Google Drive API
 # scope = ['https://spreadsheets.google.com/feeds']
 scope = ['https://spreadsheets.google.com/feeds' + ' ' +'https://www.googleapis.com/auth/drive']
@@ -71,5 +74,24 @@ for i in cell_list:
        # print user's reason
        reason = sheet.cell(row_number, col_number + 1).value
        print(reason)
+'''
 
+# email
+# read config file
+config = configparser.ConfigParser()
+config.read('config.env')
+from_email = config.get('CONF','FROM_EMAIL')
+email_pass = config.get('CONF','EMAIL_PASS')
+to_email = config.get('CONF','TO_EMAIL')
+
+message = "hello everybody"
+
+port = 465  # For SSL
+
+# Create a secure SSL context
+context = ssl.create_default_context()
+
+with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
+    server.login(from_email, email_pass)
+    server.sendmail(from_email, to_email, message)
 
