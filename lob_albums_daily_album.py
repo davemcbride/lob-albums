@@ -6,6 +6,7 @@ import re
 import configparser
 import smtplib, ssl
 
+print("Connecting to Google Sheets...")
 # use creds to create a client to interact with the Google Drive API
 # scope = ['https://spreadsheets.google.com/feeds']
 scope = ['https://spreadsheets.google.com/feeds' + ' ' +'https://www.googleapis.com/auth/drive']
@@ -15,10 +16,13 @@ client = gspread.authorize(creds)
 # Find a workbook by name and open the first sheet
 # Make sure you use the right name here.
 sheet = client.open("Load of Bands Album Challenge (Responses Test)").sheet1
+print("Done")
 
+print("Opening album list from filesystem...")
 # pick an album from the list file created by the other script
 albums_master = open("album_list.txt", "r")
 albums_list = albums_master.readlines()
+print("Done")
 
 # remove newline from the list
 alist = []
@@ -26,22 +30,28 @@ for i in albums_list:
     alist.append(i.rstrip('\n'))
 # print(alist)
 
+print("Picking today's album...")
 # pick random album from the list
 todays_album = random.choice(alist)
-print("Today's album is: " + todays_album)
+print("Done: " + todays_album)
 
+print("Writing album to log file...")
 # write todays album to file
 x = datetime.date.today()
 f = open("daily_album_log.txt", "a")
 f.write(str(x) + ": " + todays_album + "\n")
+print("Done: daily_album_log.txt")
 
+print("Removing today's album from remaining album list...")
 # remove todays album from the list
 alist.remove(todays_album)
 
 # overwrite the album file with the new list (minus today's album)
 with open('album_list.txt', 'w') as filehandle:
     filehandle.writelines("%s\n" % album for album in alist)
+print("Done")
 
+print("Finding album in Google Sheets..")
 # split album string into artist, album
 artist_album_list = todays_album.split(" - ")
 artist = artist_album_list[0]
@@ -59,7 +69,6 @@ message = """\
 Subject: Load of Bands - Daily Album {date}
 
 Today's album: {album}
-
 """.format(date=x, album=todays_album)
 
 # print the matching user from the same row
@@ -84,15 +93,20 @@ for i in cell_list:
        reason = sheet.cell(row_number, col_number + 1).value
        
        # add todays pickers to list
-       user_list.append(user)
+       user_list.append("\n")
+       user_list.append(user + "\n")
        user_list.append(reason)
-       user_list.append('\n')
+       user_list.append('\n------\n')
+print("Done")
 
+print("Create and send email...")
 # join the users and reasons
-todays_users = message.join(user_list)
-print(todays_users)
+todays_users = "".join(user_list)
+# print(todays_users)
 
-'''
+message = message + todays_users
+# print(message)
+
 # email
 # read config file
 config = configparser.ConfigParser()
@@ -110,4 +124,6 @@ context = ssl.create_default_context()
 with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
     server.login(from_email, email_pass)
     server.sendmail(from_email, to_email, message)
-'''
+
+print("Done")
+print("All done")
