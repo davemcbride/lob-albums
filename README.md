@@ -24,3 +24,8 @@ Email the artist, album, users who chose and their comments every day.
  - remove the album from the list and save remaining albums to disk
  - email the day's pick with names and comments
  
+### Additional files
+Files with config and credentials that are required but not hosted on github:
+
+ - google_api_auth.json - Google Sheets/Drive API access downloaded from Google APIs
+ - config.env - email account config
