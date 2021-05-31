@@ -105,6 +105,7 @@ todays_users = "".join(user_list)
 # print(todays_users)
 
 message = message + todays_users
+message_enc = message.encode(encoding='UTF-8',errors='ignore')
 # print(message)
 
 # email
@@ -123,7 +124,7 @@ context = ssl.create_default_context()
 # send email
 with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
     server.login(from_email, email_pass)
-    server.sendmail(from_email, to_email, message)
+    server.sendmail(from_email, to_email, message_enc)
 
 print("Done")
 print("All done")
