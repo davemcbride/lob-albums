@@ -114,7 +114,7 @@ config = configparser.ConfigParser()
 config.read('config.env')
 from_email = config.get('CONF','FROM_EMAIL')
 email_pass = config.get('CONF','EMAIL_PASS')
-to_email = config.get('CONF','TO_EMAIL')
+to_email = [(config.get('CONF','TO_EMAIL'), (config.get('CONF','TO_EMAIL_2')))]
 
 port = 465  # For SSL
 
