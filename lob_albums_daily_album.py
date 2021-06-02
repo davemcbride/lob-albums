@@ -68,9 +68,9 @@ cell_list = sheet.findall(criteria_re)
 
 # initialise start of email message
 message = """\
-Subject: Load of Bands - Daily Album {date}
+Subject: Load of Bands - Daily Album for {date}
 
-Today's album: {album}
+Tomorrow's album: {album}
 """.format(date=y, album=todays_album)
 
 # print the matching user from the same row
