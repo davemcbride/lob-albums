@@ -16,7 +16,7 @@ client = gspread.authorize(creds)
 
 # Find a workbook by name and open the first sheet
 # Make sure you use the right name here.
-sheet = client.open("Load of Bands Album Challenge (Responses Test)").sheet1
+sheet = client.open("LOB_01062021_1208").sheet1
 print("Done")
 
 print("Opening album list from filesystem...")
@@ -116,7 +116,9 @@ config = configparser.ConfigParser()
 config.read('config.env')
 from_email = config.get('CONF','FROM_EMAIL')
 email_pass = config.get('CONF','EMAIL_PASS')
-to_email = [(config.get('CONF','TO_EMAIL'), (config.get('CONF','TO_EMAIL_2')))]
+to_email = config.get('CONF','TO_EMAIL')
+to_email2 = config.get('CONF','TO_EMAIL_2')
+recipients = to_email + ', ' + to_email2
 
 port = 465  # For SSL
 
@@ -126,7 +128,7 @@ context = ssl.create_default_context()
 # send email
 with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
     server.login(from_email, email_pass)
-    server.sendmail(from_email, to_email, message_enc)
+    server.sendmail(from_email, recipients, message_enc)
 
 print("Done")
 print("All done")
