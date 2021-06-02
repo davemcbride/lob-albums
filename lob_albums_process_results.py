@@ -10,15 +10,15 @@ client = gspread.authorize(creds)
 
 # Find a workbook by name and open the first sheet
 # Make sure you use the right name here.
-sheet = client.open("Load of Bands Album Challenge (Responses Test)").sheet1
+sheet = client.open("LOB_01062021_1208").sheet1
 
 # create a lists of all the artists
 artist_list = sheet.col_values(3)
-for i in range(6,30,3):
+for i in range(6,33,3):
     artist_list = artist_list + sheet.col_values(i)
 
 album_list = sheet.col_values(4)
-for i in range(7,31,3):
+for i in range(7,34,3):
     album_list = album_list + sheet.col_values(i)
 
 # delete spreadsheet header row
