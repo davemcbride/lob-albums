@@ -2,6 +2,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import random
 import datetime
+from datetime import timedelta
 import re
 import configparser
 import smtplib, ssl
@@ -38,8 +39,9 @@ print("Done: " + todays_album)
 print("Writing album to log file...")
 # write todays album to file
 x = datetime.date.today()
+y = datetime.date.today() + timedelta(days=1)
 f = open("daily_album_log.txt", "a")
-f.write(str(x) + ": " + todays_album + "\n")
+f.write(str(y) + ": " + todays_album + "\n")
 print("Done: daily_album_log.txt")
 
 print("Removing today's album from remaining album list...")
@@ -69,7 +71,7 @@ message = """\
 Subject: Load of Bands - Daily Album {date}
 
 Today's album: {album}
-""".format(date=x, album=todays_album)
+""".format(date=y, album=todays_album)
 
 # print the matching user from the same row
 # print the matchin user's reason
