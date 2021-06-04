@@ -7,6 +7,34 @@ import re
 import configparser
 import smtplib, ssl
 
+
+def check_if_user_was_last():
+    # pick an album from the list file created by the other script
+    last_user_file = open("last_user.txt", "r")
+    last_user_list = last_user_file.readlines()
+
+    ulist = []
+    for i in last_user_list:
+        ulist.append(i.rstrip('\n'))
+
+    # print(ulist)
+
+    todays_users = ['Bill Withers']
+
+    matches = set(todays_users) & set(ulist)
+    # print(matches)
+    if len(matches) != 0:
+        # print('Same user was picked yesterday')
+        return True
+
+    else:
+        return False
+
+
+
+
+
+
 print("Connecting to Google Sheets...")
 # use creds to create a client to interact with the Google Drive API
 # scope = ['https://spreadsheets.google.com/feeds']
@@ -31,80 +59,101 @@ for i in albums_list:
     alist.append(i.rstrip('\n'))
 # print(alist)
 
-print("Picking today's album...")
-# pick random album from the list
-todays_album = random.choice(alist)
-print("Done: " + todays_album)
+def pick_album():
+    print("Picking today's album...")
+    # pick random album from the list
+    todays_album = random.choice(alist)
+    print("Done: " + todays_album)
 
-print("Writing album to log file...")
-# write todays album to file
-x = datetime.date.today()
-y = datetime.date.today() + timedelta(days=1)
-f = open("daily_album_log.txt", "a")
-f.write(str(y) + ": " + todays_album + "\n")
-print("Done: daily_album_log.txt")
+    print("Writing album to log file...")
+    # write todays album to file
+    x = datetime.date.today()
+    y = datetime.date.today() + timedelta(days=1)
+    f = open("daily_album_log.txt", "a")
+    f.write(str(y) + ": " + todays_album + "\n")
+    print("Done: daily_album_log.txt")
 
-print("Removing today's album from remaining album list...")
-# remove todays album from the list
-alist.remove(todays_album)
+    print("Removing today's album from remaining album list...")
+    # remove todays album from the list
+    alist.remove(todays_album)
 
-# overwrite the album file with the new list (minus today's album)
-with open('album_list.txt', 'w') as filehandle:
-    filehandle.writelines("%s\n" % album for album in alist)
-print("Done")
+    # overwrite the album file with the new list (minus today's album)
+    with open('album_list.txt', 'w') as filehandle:
+        filehandle.writelines("%s\n" % album for album in alist)
+    print("Done")
 
-print("Finding album in Google Sheets..")
-# split album string into artist, album
-artist_album_list = todays_album.split(" - ")
-artist = artist_album_list[0]
-album = artist_album_list[1]
+    print("Finding album in Google Sheets..")
+    # split album string into artist, album
+    artist_album_list = todays_album.split(" - ")
+    artist = artist_album_list[0]
+    album = artist_album_list[1]
 
-# find matching cells for today's album
-criteria_re = re.compile(album, re.IGNORECASE)
-cell_list = sheet.findall(criteria_re)
+    # find matching cells for today's album
+    criteria_re = re.compile(album, re.IGNORECASE)
+    cell_list = sheet.findall(criteria_re)
 
-# loop through all matching cells
-# check the artist matches the expected artist for the matching album
+    # loop through all matching cells
+    # check the artist matches the expected artist for the matching album
 
-# initialise start of email message
-message = """\
-Subject: Load of Bands - Daily Album for {date}
+    # initialise start of email message
+    message = """\
+    Subject: Load of Bands - Daily Album for {date}
 
-Tomorrow's album: {album}
-""".format(date=y, album=todays_album)
+    Tomorrow's album: {album}
+    """.format(date=y, album=todays_album)
 
-# print the matching user from the same row
-# print the matchin user's reason
+    # print the matching user from the same row
+    # print the matchin user's reason
 
-# initialise user list
-user_list = []
+    # initialise user list
+    user_list = []
 
-for i in cell_list:
-    row_number = i.row
-    col_number = i.col
-    # we have the row number that matches the album, user will be at start, artist at column to start, comment in the column to the right
-    # check the artist is the adjacent cell matches that from the file (in case there are two albums by same artist or something else went wrong
-    artist_sheet = sheet.cell(row_number, col_number - 1).value
-    if artist.lower() != artist_sheet.lower():
-        print("Artist name is not as expected for this album, are there two artists with the same album name?")
-        print("Artist from file: " + artist.lower())
-        print("Artist from sheet: " + artist_sheet.lower())
-        print("Check Sheet: Row Num: " + str(row_number) + " Col Num: " + str(col_number))
+    for i in cell_list:
+        row_number = i.row
+        col_number = i.col
+        # we have the row number that matches the album, user will be at start, artist at column to start, comment in the column to the right
+        # check the artist is the adjacent cell matches that from the file (in case there are two albums by same artist or something else went wrong
+        artist_sheet = sheet.cell(row_number, col_number - 1).value
+        if artist.lower() != artist_sheet.lower():
+            print("Artist name is not as expected for this album, are there two artists with the same album name?")
+            print("Artist from file: " + artist.lower())
+            print("Artist from sheet: " + artist_sheet.lower())
+            print("Check Sheet: Row Num: " + str(row_number) + " Col Num: " + str(col_number))
+        else:
+        user = sheet.cell(row_number, 2).value
+        reason = sheet.cell(row_number, col_number + 1).value
+        
+        # add todays pickers to list
+        user_list.append("\n")
+        user_list.append(user + "\n")
+        user_list.append(reason)
+        user_list.append('\n------\n')
+    print("Done")
+
+    print("Create and send email...")
+    # join the users and reasons
+    todays_users = "".join(user_list)
+    # print(todays_users)
+
+
+# pick today's album
+pick_album()
+
+retries = 3
+repeat_user = check_if_user_was_last()
+if  repeat_user == True:
+    # try again to find a different user
+    retries -= 1
+    while retries > 0:
+        pick_album()
     else:
-       user = sheet.cell(row_number, 2).value
-       reason = sheet.cell(row_number, col_number + 1).value
-       
-       # add todays pickers to list
-       user_list.append("\n")
-       user_list.append(user + "\n")
-       user_list.append(reason)
-       user_list.append('\n------\n')
-print("Done")
+        repeat_user == False
+else:
+    # continue
 
-print("Create and send email...")
-# join the users and reasons
-todays_users = "".join(user_list)
-# print(todays_users)
+# write today's user to file
+with open('last_user.txt', 'w') as filehandle:
+    filehandle.writelines(todays_users)
 
 message = message + todays_users
 message_enc = message.encode(encoding='UTF-8',errors='ignore')
@@ -132,3 +181,5 @@ with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
 
 print("Done")
 print("All done")
+
+
