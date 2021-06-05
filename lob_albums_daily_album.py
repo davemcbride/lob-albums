@@ -8,7 +8,7 @@ import configparser
 import smtplib, ssl
 
 
-def load_albums():
+def load_sheet():
     print("Connecting to Google Sheets...")
     # use creds to create a client to interact with the Google Drive API
     # scope = ['https://spreadsheets.google.com/feeds']
@@ -20,7 +20,10 @@ def load_albums():
     # Make sure you use the right name here.
     sheet = client.open("LOB_01062021_1208").sheet1
     print("Done")
+    return sheet
 
+
+def load_local_album_list():
     print("Opening album list from filesystem...")
     # pick an album from the list file created by the other script
     albums_master = open("album_list.txt", "r")
@@ -32,7 +35,7 @@ def load_albums():
     for i in albums_list:
         alist.append(i.rstrip('\n'))
     # print(alist)
-    return(alist, sheet)
+    return(alist)
 
 
 def pick_album(alist):
@@ -186,10 +189,13 @@ def find_user_reasons(sheet, cell_list):
 
 if __name__ == "__main__":
     # load albums
-    alist=load_albums()
+    sheet =load_sheet()
+    
+    # load album list from disk
+    alist=load_local_album_list()
 
     # pick today's album
-    chosen_album, sheet=pick_album(alist, sheet)
+    chosen_album=pick_album(alist)
 
     # find users who picked toady's album
     user_list, cell_list=find_users(chosen_album, sheet)
@@ -217,6 +223,9 @@ if __name__ == "__main__":
 
     # generate the email message
     email_message=create_email(chosen_album, user_list, reason_list, album_date)
-
+    
+    print(email_message)
+    '''
     # send email
     send_email(email_message)
+    '''
