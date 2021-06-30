@@ -191,8 +191,22 @@ if __name__ == "__main__":
     # load albums
     sheet =load_sheet()
     
-    # load album list from disk
-    alist=load_local_album_list()
+    # load the user list with counts from disk
+
+    # pick random user from the lowest x users
+
+    # pick album from that users row
+
+    # check for other users with that album
+
+    # update users/picked count on disk
+
+    # create email
+
+    # send email
+
+
+
 
     # pick today's album
     chosen_album=pick_album(alist)
@@ -213,7 +227,7 @@ if __name__ == "__main__":
             retries -= 1
     else:
         # continue with today's album and user_list
-        pass
+        pass chosen_album=pick_album
 
     # search sheet for reason fields for todays album
     reason_list=find_user_reasons(cell_list, user_list)
