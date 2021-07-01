@@ -6,6 +6,7 @@ from datetime import timedelta
 import re
 import configparser
 import smtplib, ssl
+import logging
 
 
 def load_sheet():
@@ -187,13 +188,73 @@ def find_user_reasons(sheet, cell_list):
     return(reason_list)
 
 
+def pick_user():
+    in_file='user_counts.csv'
+    users_counts={}
+
+    # read csv to dict
+    with open(in_file, mode='r') as inp:
+        reader = csv.reader(inp)
+        users_counts = {rows[0]:rows[1] for rows in reader}
+    inp.close()
+
+    # print dict line by line
+    logging.debug("Input user dict:")
+    logging.debug([print(key,':',value) for key, value in users_counts.items()])
+
+    # sort dict by value
+    sorted_users=dict(sorted(users_counts.items(), key=lambda item: item[1]))
+
+    logging.debug("Sorted input user dict")
+    logging.debug([print(key,':',value) for key, value in sorted_users.items()])
+
+    # get first value (lowest count) in sorted dict
+    values_view = sorted_users.values()
+    value_iterator = iter(values_view)
+    lowest_count_string = next(value_iterator)
+    logging.info("Lowest count string:")
+    logging.info(lowest_count_string)
+
+    # get all keys with lowest count value
+    lowest_users=[k for k,v in sorted_users.items() if v == lowest_count_string]
+    logging.info("Users with lowest count today:")
+    logging.info(lowest_users)
+
+    today_user=random.choice(lowest_users)
+    logging.info("Today's user")
+    logging.info(today_user)
+
+    # increment today_users count 
+    lowest_count_int=int(lowest_count_string)
+    new_count=lowest_count_int + 1
+    logging.info("New, incrememented count:")
+    logging.info(new_count)
+    new_count_string=str(new_count)
+
+    # update the dictonary with count
+    users_counts[today_user] = new_count_string
+    logging.debug("Today's user incrememented:")
+    logging.debug(users_counts)
+
+    # write csv to disk
+    out_file = open("user_counts.csv", "w")
+
+    writer = csv.writer(out_file)
+    for key, value in users_counts.items():
+        writer.writerow([key, value])
+    out_file.close()
+    logging.info("Wronte CSV file")
+
+
 if __name__ == "__main__":
+
+    logging.basicConfig(level=logging.DEBUG, filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+    
     # load albums
     sheet =load_sheet()
     
-    # load the user list with counts from disk
-
-    # pick random user from the lowest x users
+    # pick user from list
+    today_user=pick_user()
 
     # pick album from that users row
 
