@@ -10,64 +10,93 @@ import logging
 import csv
 import time
 
-
 def load_sheet():
     print("Connecting to Google Sheets...")
     # use creds to create a client to interact with the Google Drive API
     # scope = ['https://spreadsheets.google.com/feeds']
-    scope = ['https://spreadsheets.google.com/feeds' + ' ' +'https://www.googleapis.com/auth/drive']
+    scope = ['https://spreadsheets.google.com/feeds' + ' ' + 'https://www.googleapis.com/auth/drive']
     creds = ServiceAccountCredentials.from_json_keyfile_name('google_api_auth.json', scope)
     client = gspread.authorize(creds)
 
     # Find a workbook by name and open the first sheet
     # Make sure you use the right name here.
-    sheet = client.open("LOB_01062021_1208").sheet1
-    print("Done")
+    sheet = client.open("LOB_01062021_1208_TEST").sheet1
     return sheet
 
 
-def find_users(album, sheet):
-
+def find_all_users(album, sheet):
+    logging.debug("---Checking for additional users for today's album---")
+    # some users have picked the same album so we need to find everyone who picked today's album
     # find matching cells for today's album
     criteria_re = re.compile(album, re.IGNORECASE)
     cell_list = sheet.findall(criteria_re)
+    logging.debug("All matched album cells:{}".format(' '.join(map(str, cell_list))))
 
     # loop through all matching cells
-    # check the artist matches the expected artist for the matching album
-
     # initialise user list
     user_list = []
 
     for i in cell_list:
         row_number = i.row
-        user = sheet.cell(row_number, 2).value
-       
-        # add todays pickers to list
-        user_list.append(user)
+        col_number = i.col
+        # sometimes the album name will be same as artist (e.g. vampire weekend, which screws this up)
+        # pass the album column numbers in as a list to check the match against
 
-    logging.debug("All matched users:{}".format(' '.join(map(str, user_list))))
+        album_column_list = [4, 7, 10, 13, 16, 19, 22, 25, 28, 31]
 
-    return(user_list, cell_list)
-    
+        logging.debug("Column number: " + str(col_number))
 
-def create_email(chosen_album, user_list, reason_list, album_date):
-    print("Create and send email...")
+        if col_number in album_column_list:
+            user = sheet.cell(row_number, 2).value
+            reason = sheet.cell(row_number, col_number + 1).value
+        else:
+            pass
+            logging.info("The album name matched a non-album cell but this should be ignored...hopefully")
+            user = 'not_a_real_user'
+            reason = 'not_a_real_reason'
+        # add today's pickers to list
+        user_list.append("\n")
+        user_list.append(user + "\n")
+        user_list.append(reason)
+        user_list.append('\n------\n')
+
+    # this seems like a bad way to do this
+    # remove the dummy string not_a_real_user
+    list(filter(('not_a_real_user').__ne__, user_list))
+    list(filter(('not_a_real_reason').__ne__, user_list))
+
+    logging.debug("All matched users and reasons. Dummy users removed:{}".format(' '.join(map(str, user_list))))
+
+    # if list is empty
+    # join the user_list to make...something
+    try:
+        todays_user_messages = "".join(user_list)
+    except:
+        todays_user_messages = "ERROR: Something went wrong trying to get comments"
+
+    logging.debug("Joined user and reason list: " + todays_user_messages)
+
+    # return the users + reasons and all cells for today's album
+    return (todays_user_messages, cell_list)
+
+
+# def create_email(today_artist, today_album, user_list, reason_list, album_date)
+def create_email(today_artist, today_album, todays_user_messages, album_date):
+
+    logging.info("---Creating email---")
 
     message = """\
     Subject: Load of Bands - Daily Album for {date}
 
-    Tomorrow's album: {album}
-    """.format(date=album_date, album=chosen_album)
+    Tomorrow's album: {artist} - {album}
+    """.format(date=album_date, album=today_album, artist=today_artist)
 
-    # print the matching user from the same row
-    # print the matchin user's reason
+    message = message + todays_user_messages
+    logging.debug("Pre-encoding email: " + message)
 
-    for n in user_list, reason_list:
-        message = message + user_list[n]
-        message = message + reason_list[n]
-    
-    message_enc = message.encode(encoding='UTF-8',errors='ignore')
-    # print(message)
+    # encode for some reason I have forgotten. bad chars or something
+    message_enc = message.encode(encoding='UTF-8', errors='ignore')
+
     return message_enc
 
 
@@ -75,10 +104,10 @@ def send_email(message_enc):
     # read config file
     config = configparser.ConfigParser()
     config.read('config.env')
-    from_email = config.get('CONF','FROM_EMAIL')
-    email_pass = config.get('CONF','EMAIL_PASS')
-    to_email = config.get('CONF','TO_EMAIL')
-    to_email2 = config.get('CONF','TO_EMAIL_2')
+    from_email = config.get('CONF', 'FROM_EMAIL')
+    email_pass = config.get('CONF', 'EMAIL_PASS')
+    to_email = config.get('CONF', 'TO_EMAIL')
+    to_email2 = config.get('CONF', 'TO_EMAIL_2')
     recipients = to_email + ', ' + to_email2
 
     port = 465  # For SSL
@@ -95,42 +124,27 @@ def send_email(message_enc):
     print("All done")
 
 
-def find_user_reasons(sheet, cell_list):
-    # this feels risky as we're divorcing the user_list and reason_list
-    # be interesting to see if they join consistently especially when there are multiple users
-
-    logging.debug("cells... {}".format(' '.join(map(str, cell_list))))
-
-    reason_list=[]
-    for i in cell_list:
-        row_number = i.row
-        col_number = i.col
-        reason = sheet.cell(row_number, col_number + 1).value
-        reason_list.append(reason)
-        logging.debug("Reasons... {}".format(' '.join(map(str, reason_list))))
-    return(reason_list)
-
-
 def pick_user():
+    logging.debug("---Pick user---")
     logging.debug("Finding user for today...")
-    in_file='user_counts.csv'
-    users_counts={}
+    in_file = 'user_counts.csv'
+    users_counts = {}
 
     # read csv to dict
     with open(in_file, mode='r') as inp:
         reader = csv.reader(inp)
-        users_counts = {rows[0]:rows[1] for rows in reader}
+        users_counts = {rows[0]: rows[1] for rows in reader}
     inp.close()
 
     # print dict line by line
     logging.debug("Input user dict:")
-    logging.debug([print(key,':',value) for key, value in users_counts.items()])
+    logging.debug([print(key, ':', value) for key, value in users_counts.items()])
 
     # sort dict by value
-    sorted_users=dict(sorted(users_counts.items(), key=lambda item: item[1]))
+    sorted_users = dict(sorted(users_counts.items(), key=lambda item: item[1]))
 
     logging.debug("Sorted input user dict")
-    logging.debug([print(key,':',value) for key, value in sorted_users.items()])
+    logging.debug([print(key, ':', value) for key, value in sorted_users.items()])
 
     # get first value (lowest count) in sorted dict
     values_view = sorted_users.values()
@@ -140,24 +154,24 @@ def pick_user():
     logging.info(lowest_count_string)
 
     # get all keys with lowest count value
-    lowest_users=[k for k,v in sorted_users.items() if v == lowest_count_string]
+    lowest_users = [k for k, v in sorted_users.items() if v == lowest_count_string]
     logging.info("Users with lowest count today:")
     logging.info(lowest_users)
 
-    today_user=random.choice(lowest_users)
+    today_user = random.choice(lowest_users)
     logging.info("Today's user")
     logging.info(today_user)
 
     # increment today_users count 
-    lowest_count_int=int(lowest_count_string)
-    new_count=lowest_count_int + 1
-    logging.info("New, incrememented count:")
+    lowest_count_int = int(lowest_count_string)
+    new_count = lowest_count_int + 1
+    logging.info("New, incremented count:")
     logging.info(new_count)
-    new_count_string=str(new_count)
+    new_count_string = str(new_count)
 
-    # update the dictonary with count
+    # update the dictionary with count
     users_counts[today_user] = new_count_string
-    logging.debug("Today's user incrememented:")
+    logging.debug("Today's user incremented:")
     logging.debug(users_counts)
 
     # write csv to disk
@@ -169,138 +183,105 @@ def pick_user():
     out_file.close()
     logging.info("Wrote CSV file")
 
-    return(today_user)
+    return (today_user)
 
 
 def pick_album_for_user(today_user, sheet):
-    logging.info("Finding album from user list")
+    logging.info("---Finding album for today's user---")
     # find user row
 
     logging.info("Trying to connect to Google: ")
     cell = sheet.find(today_user)
-    logging.debug("Looking for user: " +today_user)
+    logging.debug("Looking for user: " + today_user)
     logging.debug("Found user at R%sC%s" % (cell.row, cell.col))
     row_num = cell.row
 
-    # pick random artist cell
-    rand_artist_col_num=random.randrange(3,30,3)
-    logging.debug("Random column number is: " + str(rand_artist_col_num))
-
     # today's artist - can't be blank
+    attempts = 1
+    max_attempts = 12
     today_artist = ""
+
+    # generate a list of the album fields
+    artist_fields = []
+    for i in range(3, 33, 3):
+        artist_fields.append(i)
+
     while not today_artist:
-        attempts = 1
-        print("Attempt: " + attempts)
-        today_artist = sheet.cell(row_num, rand_artist_col_num).value
-        # rate limit requests sent to Google or we'll get banned
-        time.sleep(5)
-        attempts +=1
-        if attempts > 10:
+        # pick random artist cell
+        this_artist_col = random.choice(artist_fields)
+        logging.debug("Random column number is: " + str(this_artist_col))
+
+        # remove the choice from the list so we don't try again
+        artist_fields.remove(this_artist_col)
+
+        print("Connecting to Google attempting to find artist: " + str(attempts) + "/" + str(max_attempts))
+        print("Random column number: " + str(this_artist_col))
+        today_artist = sheet.cell(row_num, this_artist_col).value
+        # rate limit requests sent to Google or we'll get banned if something goes wrong
+        time.sleep(3)
+        attempts += 1
+        if attempts > max_attempts:
             logging.error("Unable to find artist cell in sheet")
             quit()
 
-    logging.debug("Today's arist is: " +today_artist)
-    album_column = rand_artist_col_num + 1
-    today_album = sheet.cell(row_num, album_column).value
-    logging.debug("Today's album is: " +today_album)
+    logging.debug("Today's artist is: " + today_artist)
 
-    return(today_artist, today_album)
+    # album is adjacent to artist column
+    album_column = this_artist_col + 1
+    today_album = sheet.cell(row_num, album_column).value
+    logging.debug("Today's album is: " + today_album)
+
+    return (today_artist, today_album)
 
 
 def delete_today_from_sheet(sheet, cell_list):
+    logging.info("---Clear the cells for today's album---")
+    logging.debug("All matched users and reasons. Dummy users removed:{}".format(' '.join(map(str, cell_list))))
     for i in cell_list:
         row_number = i.row
         album_col_number = i.col
         artist_col_number = i.col - 1
         reason_col_number = i.col + 1
         # clear the found album
-        logging.debug("Deleting album cell: " +str(row_number) +","+str(album_col_number))
+        logging.debug("Deleting album cell: " + str(row_number) + "," + str(album_col_number))
         sheet.update_cell(row_number, album_col_number, '')
-        logging.debug("Deleting artist cell: " +str(row_number) +","+str(artist_col_number))
+        logging.debug("Deleting artist cell: " + str(row_number) + "," + str(artist_col_number))
         sheet.update_cell(row_number, artist_col_number, '')
-        logging.debug("Deleting reason cell: " +str(row_number) +","+str(reason_col_number))
+        logging.debug("Deleting reason cell: " + str(row_number) + "," + str(reason_col_number))
         sheet.update_cell(row_number, reason_col_number, '')
 
 
 if __name__ == "__main__":
 
-    logging.basicConfig(level=logging.DEBUG, filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(level=logging.DEBUG, filename='app.log', filemode='w',
+                        format='%(name)s - %(levelname)s - %(message)s')
 
     today = datetime.date.today()
+    d2 = (today.strftime("%b %d %Y"))
     logging.info("-----------------------")
-    logging.info("Script running on: ")
-    logging.info(today.strftime("%b %d %Y"))
+    logging.info("Script running on: " + d2)
 
     tomorrow = today + datetime.timedelta(days=1)
-    album_date =(tomorrow.strftime("%b %d %Y"))
-    
-    # load speadsheet
-    sheet=load_sheet()
-    
+    album_date = (tomorrow.strftime("%b %d %Y"))
+
+    # load spreadsheet
+    sheet = load_sheet()
+
     # pick user from list
-    today_user=pick_user()
-    print(today_user)
+    today_user = pick_user()
+    today_user = 'Kal'
 
     # pick album from that user
-    today_artist, today_album=pick_album_for_user(today_user, sheet)
+    today_artist, today_album = pick_album_for_user(today_user, sheet)
 
     # check for other users with that album
-    # the output cell_list is a list of coordinates of matached albums
-    user_list, cell_list=find_users(today_album, sheet)
-    reason_list=find_user_reasons(sheet, cell_list)
+    todays_user_messages, cell_list = find_all_users(today_album, sheet)
 
-    # delete the album from the sheet
+    # delete the album from the sheet so we don't get it again
     delete_today_from_sheet(sheet, cell_list)
 
-    # join users and reason lists
-    for f,b in zip(user_list, reason_list):
-        logging.debug("Today's user/reasons")
-        logging.debug(f + " -- ", b)
-    
-    
-
-
     # create email
-    today_artist, today_album=pick_album_for_user(today_user, sheet)
-    encoded_message = create_email(today_artist, today_album, user_list, reason_list, album_date)
+    encoded_message = create_email(today_artist, today_album, todays_user_messages, album_date)
 
     # send email
-
-
-
-    '''
-    # pick today's album
-    chosen_album=pick_album(alist)
-
-    # find users who picked toady's album
-    user_list, cell_list=find_users(chosen_album, sheet)
-
-    # check if any of the users in the list were up yesterday
-    # want to avoid the same user on consecutive days if possible
-    # if repeat_user == True they were up yesterday
-    repeat_user=check_if_user_was_last(user_list)
-
-    # try to find a new user a max of 2 times
-    retries = 2
-    if repeat_user==True:
-        while retries > 0:
-            chosen_album, sheet=pick_album(alist, sheet)
-            retries -= 1
-    else:
-        # continue with today's album and user_list
-        pass chosen_album=pick_album
-
-    # search sheet for reason fields for todays album
-    reason_list=find_user_reasons(cell_list, user_list)
-
-    # write logs with today's album and users
-    album_date=write_album_logs(chosen_album, user_list)
-
-    # generate the email message
-    email_message=create_email(chosen_album, user_list, reason_list, album_date)
-    
-    print(email_message)
-
-    # send email
-    send_email(email_message)
-    '''
+    send_email(encoded_message)
