@@ -269,7 +269,6 @@ if __name__ == "__main__":
 
     # pick user from list
     today_user = pick_user()
-    today_user = 'Kal'
 
     # pick album from that user
     today_artist, today_album = pick_album_for_user(today_user, sheet)
