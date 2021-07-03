@@ -60,17 +60,21 @@ def find_all_users(album, sheet):
         user_list.append(reason)
         user_list.append('\n------\n')
 
-    # this seems like a bad way to do this
+    # this seems like a bad way to do this byt hey ho
     # remove the dummy string not_a_real_user
-    list(filter(('not_a_real_user').__ne__, user_list))
-    list(filter(('not_a_real_reason').__ne__, user_list))
+    clean_list = []
+    for i in user_list:
+        if 'not_a_real' in i:
+            pass
+        else:
+            clean_list.append(i)
 
-    logging.debug("All matched users and reasons. Dummy users removed:{}".format(' '.join(map(str, user_list))))
+    logging.debug("All matched users and reasons. Dummy users removed:{}".format(' '.join(map(str, clean_list))))
 
     # if list is empty
     # join the user_list to make...something
     try:
-        todays_user_messages = "".join(user_list)
+        todays_user_messages = "".join(clean_list)
     except:
         todays_user_messages = "ERROR: Something went wrong trying to get comments"
 
@@ -283,4 +287,4 @@ if __name__ == "__main__":
     encoded_message = create_email(today_artist, today_album, todays_user_messages, album_date)
 
     # send email
-    send_email(encoded_message)
+    # send_email(encoded_message)
