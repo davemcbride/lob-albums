@@ -10,6 +10,7 @@ import logging
 import csv
 import time
 
+
 def load_sheet():
     print("Connecting to Google Sheets...")
     # use creds to create a client to interact with the Google Drive API
@@ -20,7 +21,7 @@ def load_sheet():
 
     # Find a workbook by name and open the first sheet
     # Make sure you use the right name here.
-    sheet = client.open("LOB_01062021_1208_TEST").sheet1
+    sheet = client.open("LOB_0207221_Rel2").sheet1
     return sheet
 
 
@@ -84,7 +85,6 @@ def find_all_users(album, sheet):
     return (todays_user_messages, cell_list)
 
 
-# def create_email(today_artist, today_album, user_list, reason_list, album_date)
 def create_email(today_artist, today_album, todays_user_messages, album_date):
 
     logging.info("---Creating email---")
@@ -287,4 +287,4 @@ if __name__ == "__main__":
     encoded_message = create_email(today_artist, today_album, todays_user_messages, album_date)
 
     # send email
-    # send_email(encoded_message)
+    send_email(encoded_message)
