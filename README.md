@@ -16,16 +16,19 @@ Email the artist, album, users who chose and their comments every day.
 
 ### lob_albums_daily_album.py
  - should be scheduled to run daily (cronjob on raspberry pi probably)
- - input1 should be the spreadsheet - can be read from google sheets or offline copy
- - input2 is the list of unique albums
- - script should pick an album from the uniq list
- - find the album for today in the sheet
- - pick the username(s) from the same row, pick the comment(s) in the adjacent cell
- - remove the album from the list and save remaining albums to disk
- - email the day's pick with names and comments
+ - data is held in a Google spreadsheet populated by users via Google Forms
+ - a count is maintained of number of times each user has been selected
+ - the users who share the lowest count each day are eligible to be chosen today
+ - random choice of those users each run
+ - find a random album for the user from the sheet
+ - remove the album from the working copy of the sheet
+ - sometimes more than one user will pick the same album so search the sheet to find them
+ - find the comments each user added for the albums
+ - send an email with today's album 
  
 ### Additional files
 Files with config and credentials that are required but not hosted on github:
 
  - google_api_auth.json - Google Sheets/Drive API access downloaded from Google APIs
  - config.env - email account config
+ - user_counts.csv - initial copy of the stored counts per user populated from exporting data from the Google Sheet
