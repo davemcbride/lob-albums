@@ -142,13 +142,13 @@ def pick_user():
 
     # print dict line by line
     logging.debug("Input user dict:")
-    logging.debug([print(key, ':', value) for key, value in users_counts.items()])
+    logging.debug(users_counts)
 
     # sort dict by value
     sorted_users = dict(sorted(users_counts.items(), key=lambda item: item[1]))
 
     logging.debug("Sorted input user dict")
-    logging.debug([print(key, ':', value) for key, value in sorted_users.items()])
+    logging.debug(sorted_users)
 
     # get first value (lowest count) in sorted dict
     values_view = sorted_users.values()
