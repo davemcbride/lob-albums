@@ -34,8 +34,11 @@ def find_all_users(album, sheet):
     logging.debug("All matched album cells:{}".format(' '.join(map(str, cell_list))))
 
     # loop through all matching cells
-    # initialise user list
-    user_list = []
+    # initialise user_reason list
+    user_reason_list = []
+
+    # initialise list for just users
+    user_only_list = []
 
     for i in cell_list:
         row_number = i.row
@@ -55,25 +58,36 @@ def find_all_users(album, sheet):
             logging.info("The album name matched a non-album cell but this should be ignored...hopefully")
             user = 'not_a_real_user'
             reason = 'not_a_real_reason'
-        # add today's pickers to list
-        user_list.append("\n")
-        user_list.append(user + "\n")
-        user_list.append(reason)
-        user_list.append('\n------\n')
+        # add today's pickers to list with their reason cell
+        user_reason_list.append("\n")
+        user_reason_list.append(user + "\n")
+        user_reason_list.append(reason)
+        user_reason_list.append('\n------\n')
+
+        # also add just the user to the list
+        user_only_list.append(user)
 
     # this seems like a bad way to do this byt hey ho
     # remove the dummy string not_a_real_user
     clean_list = []
-    for i in user_list:
+    for i in user_reason_list:
         if 'not_a_real' in i:
             pass
         else:
             clean_list.append(i)
 
+    # do the same for the user_only_list
+    clean_user_only_list = []
+    for i in user_only_list:
+        if 'not_a_real' in i:
+            pass
+        else:
+            clean_user_only_list.append(i)
+
     logging.debug("All matched users and reasons. Dummy users removed:{}".format(' '.join(map(str, clean_list))))
 
     # if list is empty
-    # join the user_list to make...something
+    # join the user_reason_list to make...something
     try:
         todays_user_messages = "".join(clean_list)
     except:
@@ -82,7 +96,7 @@ def find_all_users(album, sheet):
     logging.debug("Joined user and reason list: " + todays_user_messages)
 
     # return the users + reasons and all cells for today's album
-    return (todays_user_messages, cell_list)
+    return (todays_user_messages, cell_list, clean_user_only_list)
 
 
 def create_email(today_artist, today_album, todays_user_messages, album_date):
@@ -91,6 +105,7 @@ def create_email(today_artist, today_album, todays_user_messages, album_date):
 
     message = """\
     Subject: Load of Bands - Daily Album for {date}
+
 
     Tomorrow's album: {artist} - {album}
     """.format(date=album_date, album=today_album, artist=today_artist)
@@ -166,27 +181,6 @@ def pick_user():
     logging.info("Today's user")
     logging.info(today_user)
 
-    # increment today_users count 
-    lowest_count_int = int(lowest_count_string)
-    new_count = lowest_count_int + 1
-    logging.info("New, incremented count:")
-    logging.info(new_count)
-    new_count_string = str(new_count)
-
-    # update the dictionary with count
-    users_counts[today_user] = new_count_string
-    logging.debug("Today's user incremented:")
-    logging.debug(users_counts)
-
-    # write csv to disk
-    out_file = open("user_counts.csv", "w")
-
-    writer = csv.writer(out_file)
-    for key, value in users_counts.items():
-        writer.writerow([key, value])
-    out_file.close()
-    logging.info("Wrote CSV file")
-
     return (today_user)
 
 
@@ -255,18 +249,54 @@ def delete_today_from_sheet(sheet, cell_list):
         sheet.update_cell(row_number, reason_col_number, '')
 
 
+def increment_user_count(user_list):
+    logging.debug("---Incrementing user counts---")
+
+    # pass in a list of users whose count should be incremeneted
+    logging.debug("Users to be incrememnted:")
+    logging.debug(user_list)
+
+    # open the csv file
+    in_file = 'user_counts.csv'
+    users_counts = {}
+
+    # read csv to dict
+    with open(in_file, mode='r') as inp:
+        reader = csv.reader(inp)
+        users_counts = {rows[0]: rows[1] for rows in reader}
+    inp.close()
+
+    for u in user_list:
+        # get the users current count
+        old_count = users_counts.get(u)
+        old_count_int = int(old_count)
+        new_count_int = old_count_int + 1
+        new_count = str(new_count_int)
+        # update the dictionary with count
+        users_counts[u] = new_count
+        logging.debug(u + " - old count: " + old_count + " new count: " + new_count)
+
+    # write csv to disk
+    out_file = open("user_counts.csv", "w")
+
+    writer = csv.writer(out_file)
+    for key, value in users_counts.items():
+        writer.writerow([key, value])
+    out_file.close()
+    logging.info("Wrote CSV file")
+
+
 if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG, filename='app.log', filemode='w',
                         format='%(name)s - %(levelname)s - %(message)s')
 
-    today = datetime.date.today()
-    d2 = (today.strftime("%b %d %Y"))
+    x = datetime.date.today()
+    y = datetime.date.today() + timedelta(days=1)
     logging.info("-----------------------")
-    logging.info("Script running on: " + d2)
+    logging.info("Script running on: " + str(x) + "for: " + str(y))
 
-    tomorrow = today + datetime.timedelta(days=1)
-    album_date = (tomorrow.strftime("%b %d %Y"))
+    album_date = y
 
     # load spreadsheet
     sheet = load_sheet()
@@ -278,7 +308,10 @@ if __name__ == "__main__":
     today_artist, today_album = pick_album_for_user(today_user, sheet)
 
     # check for other users with that album
-    todays_user_messages, cell_list = find_all_users(today_album, sheet)
+    todays_user_messages, cell_list, user_only_list = find_all_users(today_album, sheet)
+
+    # incremement additional users
+    increment_user_count(user_only_list)
 
     # delete the album from the sheet so we don't get it again
     delete_today_from_sheet(sheet, cell_list)
