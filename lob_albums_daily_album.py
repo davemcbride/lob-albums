@@ -235,18 +235,24 @@ def pick_album_for_user(today_user, sheet):
 def delete_today_from_sheet(sheet, cell_list):
     logging.info("---Clear the cells for today's album---")
     logging.debug("All matched users and reasons. Dummy users removed:{}".format(' '.join(map(str, cell_list))))
+
+    album_column_list = [4, 7, 10, 13, 16, 19, 22, 25, 28, 31]
+
     for i in cell_list:
-        row_number = i.row
+        row_number = i.row   
         album_col_number = i.col
-        artist_col_number = i.col - 1
-        reason_col_number = i.col + 1
-        # clear the found album
-        logging.debug("Deleting album cell: " + str(row_number) + "," + str(album_col_number))
-        sheet.update_cell(row_number, album_col_number, '')
-        logging.debug("Deleting artist cell: " + str(row_number) + "," + str(artist_col_number))
-        sheet.update_cell(row_number, artist_col_number, '')
-        logging.debug("Deleting reason cell: " + str(row_number) + "," + str(reason_col_number))
-        sheet.update_cell(row_number, reason_col_number, '')
+
+        # pass the album match cell list through valid album columns to prevent accidental delete of cells as the artist matches the album name
+        if album_col_number in album_column_list:   
+            artist_col_number = i.col - 1
+            reason_col_number = i.col + 1
+            # clear the found album
+            logging.debug("Deleting album cell: " + str(row_number) + "," + str(album_col_number))
+            sheet.update_cell(row_number, album_col_number, '')
+            logging.debug("Deleting artist cell: " + str(row_number) + "," + str(artist_col_number))
+            sheet.update_cell(row_number, artist_col_number, '')
+            logging.debug("Deleting reason cell: " + str(row_number) + "," + str(reason_col_number))
+            sheet.update_cell(row_number, reason_col_number, '')
 
 
 def increment_user_count(user_list):
