@@ -22,6 +22,7 @@ def load_sheet():
     # Find a workbook by name and open the first sheet
     # Make sure you use the right name here.
     sheet = client.open("LOB_0207221_Rel2").sheet1
+    # sheet = client.open("LOB_01062021_1208_TEST").sheet1
     return sheet
 
 
@@ -53,6 +54,9 @@ def find_all_users(album, sheet):
         if col_number in album_column_list:
             user = sheet.cell(row_number, 2).value
             reason = sheet.cell(row_number, col_number + 1).value
+            # handle if no reason was submitted
+            if reason is None:
+                reason = '---No reason provided---'
         else:
             pass
             logging.info("The album name matched a non-album cell but this should be ignored...hopefully")
@@ -63,9 +67,13 @@ def find_all_users(album, sheet):
         user_reason_list.append(user + "\n")
         user_reason_list.append(reason)
         user_reason_list.append('\n------\n')
+        logging.debug("User reason list:")
+        logging.debug(user_reason_list)
 
         # also add just the user to the list
         user_only_list.append(user)
+        logging.debug("User only list:")
+        logging.debug(user_only_list)
 
     # this seems like a bad way to do this byt hey ho
     # remove the dummy string not_a_real_user
