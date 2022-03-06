@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import random
@@ -5,10 +7,28 @@ import datetime
 from datetime import timedelta
 import re
 import configparser
-import smtplib, ssl
 import logging
 import csv
 import time
+
+# imports for gmail api
+import os.path
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+import base64
+import mimetypes
+import os
+from email.mime.audio import MIMEAudio
+from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+from apiclient import errors
 
 
 def load_sheet():
@@ -21,7 +41,7 @@ def load_sheet():
 
     # Find a workbook by name and open the first sheet
     # Make sure you use the right name here.
-    sheet = client.open("LOB_0207221_Rel2").sheet1
+    sheet = client.open("LOB_0207221_Rel2.1").sheet1
     # sheet = client.open("LOB_01062021_1208_TEST").sheet1
     return sheet
 
@@ -107,48 +127,36 @@ def find_all_users(album, sheet):
     return (todays_user_messages, cell_list, clean_user_only_list)
 
 
-def create_email(today_artist, today_album, todays_user_messages, album_date):
+def create_email_body(today_artist, today_album, todays_user_messages):
 
     logging.info("---Creating email---")
 
     message = """\
-    Subject: Load of Bands - Daily Album for {date}
-
-
     Tomorrow's album: {artist} - {album}
-    """.format(date=album_date, album=today_album, artist=today_artist)
+    """.format(album=today_album, artist=today_artist)
 
     message = message + todays_user_messages
-    logging.debug("Pre-encoding email: " + message)
 
-    # encode for some reason I have forgotten. bad chars or something
-    message_enc = message.encode(encoding='UTF-8', errors='ignore')
-
-    return message_enc
+    return message
 
 
-def send_email(message_enc):
-    # read config file
-    config = configparser.ConfigParser()
-    config.read('config.env')
-    from_email = config.get('CONF', 'FROM_EMAIL')
-    email_pass = config.get('CONF', 'EMAIL_PASS')
-    to_email = config.get('CONF', 'TO_EMAIL')
-    to_email2 = config.get('CONF', 'TO_EMAIL_2')
-    recipients = to_email + ', ' + to_email2
+def create_message(sender, to, subject, message_text):
+  """Create a message for an email.
 
-    port = 465  # For SSL
+  Args:
+    sender: Email address of the sender.
+    to: Email address of the receiver.
+    subject: The subject of the email message.
+    message_text: The text of the email message.
 
-    # Create a secure SSL context
-    context = ssl.create_default_context()
-
-    # send email
-    with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
-        server.login(from_email, email_pass)
-        server.sendmail(from_email, recipients, message_enc)
-
-    print("Done")
-    print("All done")
+  Returns:
+    An object containing a base64url encoded email object.
+  """
+  message = MIMEText(message_text)
+  message['to'] = to
+  message['from'] = sender
+  message['subject'] = subject
+  return {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
 
 
 def pick_user():
@@ -300,6 +308,76 @@ def increment_user_count(user_list):
     logging.info("Wrote CSV file")
 
 
+# gmail API functions
+# If modifying these scopes, delete the file token.json.
+# SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+SCOPES = ['https://mail.google.com/']
+
+
+def gmail_authenticate():
+    """Shows basic usage of the Gmail API.
+    Lists the user's Gmail labels.
+    """
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    try:
+        # Call the Gmail API
+        service = build('gmail', 'v1', credentials=creds)
+
+        '''
+        results = service.users().labels().list(userId='me').execute()
+        labels = results.get('labels', [])
+
+        if not labels:
+            print('No labels found.')
+            return
+        print('Labels:')
+        for label in labels:
+            print(label['name'])
+        '''
+
+    except HttpError as error:
+        # TODO(developer) - Handle errors from gmail API.
+        print(f'An error occurred: {error}')
+
+    return service
+
+
+def send_message(service, user_id, message):
+    """Send an email message.
+    Args:
+      service: Authorized Gmail API service instance.
+      user_id: User's email address. The special value "me"
+      can be used to indicate the authenticated user.
+      message: Message to be sent.
+    Returns:
+      Sent Message.
+    """
+    try:
+        message = (service.users().messages().send(userId=user_id, body=message)
+                   .execute())
+        print('Message Id: %s' % message['id'])
+        return message
+    except errors.HttpError as error:
+        print('An error occurred: %s' % error)
+
+
 if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG, filename='app.log', filemode='w',
@@ -328,10 +406,22 @@ if __name__ == "__main__":
     increment_user_count(user_only_list)
 
     # delete the album from the sheet so we don't get it again
-    delete_today_from_sheet(sheet, cell_list)
+    # delete_today_from_sheet(sheet, cell_list)
 
-    # create email
-    encoded_message = create_email(today_artist, today_album, todays_user_messages, album_date)
+    # create email body
+    email_body = create_email_body(today_artist, today_album, todays_user_messages)
 
+    # authenticate with google
+    service = gmail_authenticate()
+
+    # create_message(sender, to, subject, message_text)
+    email_subject = 'LoB album for: ' + str(album_date)
+
+    # read config file for to email address
+    config = configparser.ConfigParser()
+    config.read('config.env')
+    to_email = config.get('CONF', 'TO_EMAIL')
+    message = create_message('me', to_email, email_subject, email_body)
+    
     # send email
-    send_email(encoded_message)
+    send_message(service, 'me', message)
