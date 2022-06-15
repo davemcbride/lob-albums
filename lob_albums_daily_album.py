@@ -378,6 +378,19 @@ def send_message(service, user_id, message):
         print('An error occurred: %s' % error)
 
 
+def delete_ten_users():
+    # delete user from the user counts file when they reach 10
+    a_file = open("user_counts.csv", "r")
+    lines = a_file.readlines()
+    a_file.close()
+
+    new_file = open("user_counts.csv", "w")
+    for line in lines:
+        if "10" not in line.strip("\n"):
+            new_file.write(line)
+    new_file.close()
+
+
 if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG, filename='app.log', filemode='w',
@@ -405,8 +418,11 @@ if __name__ == "__main__":
     # incremement additional users
     increment_user_count(user_only_list)
 
+    # delete user once they reach a 10 count
+    delete_ten_users()
+
     # delete the album from the sheet so we don't get it again
-    # delete_today_from_sheet(sheet, cell_list)
+    delete_today_from_sheet(sheet, cell_list)
 
     # create email body
     email_body = create_email_body(today_artist, today_album, todays_user_messages)
